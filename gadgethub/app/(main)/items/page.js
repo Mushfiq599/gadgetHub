@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { gadgets, CATEGORIES } from "@/lib/data";
+import { gadgets as seedGadgets, CATEGORIES } from "@/lib/data";
 import GadgetCard from "@/components/GadgetCard";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 
@@ -21,10 +21,19 @@ export default function ItemsPage() {
     const [search, setSearch] = useState("");
     const [category, setCategory] = useState(initialCategory);
     const [sort, setSort] = useState("default");
+    const [allGadgets, setAllGadgets] = useState(seedGadgets);
+
+    // Merge seed data with user-added items from localStorage
+    useEffect(() => {
+        const stored = JSON.parse(
+            localStorage.getItem("gadgethub_items") || "[]"
+        );
+        setAllGadgets([...seedGadgets, ...stored]);
+    }, []);
 
     // Filtered + sorted list
     const filtered = useMemo(() => {
-        let list = [...gadgets];
+        let list = [...allGadgets];
 
         // Search filter
         if (search.trim()) {
@@ -61,7 +70,7 @@ export default function ItemsPage() {
         }
 
         return list;
-    }, [search, category, sort]);
+    }, [search, category, sort, allGadgets]);
 
     const clearFilters = () => {
         setSearch("");
@@ -90,7 +99,7 @@ export default function ItemsPage() {
                         All Gadgets
                     </h1>
                     <p className="mt-2 text-sm" style={{ color: "#94a3b8" }}>
-                        {gadgets.length} products across {CATEGORIES.length - 1} categories
+                        {allGadgets.length} products across {CATEGORIES.length - 1} categories
                     </p>
                 </div>
             </div>
@@ -183,7 +192,7 @@ export default function ItemsPage() {
                     )}
                 </div>
 
-                {/* ── Category pill tabs (quick filter) ── */}
+                {/* ── Category pill tabs ── */}
                 <div className="flex flex-wrap gap-2 mb-8">
                     {CATEGORIES.map((cat) => (
                         <button
@@ -191,9 +200,7 @@ export default function ItemsPage() {
                             onClick={() => setCategory(cat)}
                             style={{
                                 backgroundColor:
-                                    category === cat
-                                        ? "#6366f1"
-                                        : "rgba(30,41,59,0.8)",
+                                    category === cat ? "#6366f1" : "rgba(30,41,59,0.8)",
                                 color: category === cat ? "white" : "#94a3b8",
                                 border:
                                     category === cat
@@ -234,7 +241,6 @@ export default function ItemsPage() {
                         ))}
                     </div>
                 ) : (
-                    /* Empty state */
                     <div className="flex flex-col items-center justify-center py-24 text-center">
                         <div
                             className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
@@ -242,7 +248,10 @@ export default function ItemsPage() {
                         >
                             <Search size={28} style={{ color: "#334155" }} />
                         </div>
-                        <h3 className="text-lg font-semibold mb-2" style={{ color: "#f1f5f9" }}>
+                        <h3
+                            className="text-lg font-semibold mb-2"
+                            style={{ color: "#f1f5f9" }}
+                        >
                             No gadgets found
                         </h3>
                         <p className="text-sm mb-6" style={{ color: "#94a3b8" }}>
