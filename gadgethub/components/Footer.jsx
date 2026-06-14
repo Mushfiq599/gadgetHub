@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Cpu, Code2, X, Video } from "lucide-react";
+import { Cpu } from "lucide-react";
+import { FaYoutube, FaFacebookF, FaInstagram } from "react-icons/fa";
 
 export default function Footer() {
     return (
@@ -28,17 +29,48 @@ export default function Footer() {
                         <p style={{ color: "#94a3b8" }} className="text-sm leading-relaxed">
                             Curated tech gadgets for enthusiasts, professionals, and everyday users.
                         </p>
+
+                        {/* Social links */}
                         <div className="flex items-center gap-3 pt-1">
-                            {[Code2, X, Video].map((Icon, i) => (
-                                <a
-                                    key={i}
-                                    href="#"
-                                    style={{ color: "#94a3b8", backgroundColor: "#1e293b" }}
-                                    className="w-9 h-9 rounded-lg flex items-center justify-center hover:text-white transition-colors"
-                                >
-                                    <Icon size={16} />
-                                </a>
-                            ))}
+                            <a
+                                href="https://www.youtube.com"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                    color: "#94a3b8",
+                                    backgroundColor: "#1e293b",
+                                    border: "1px solid #334155",
+                                }}
+                                className="w-9 h-9 rounded-lg flex items-center justify-center hover:text-white hover:border-red-500 hover:text-red-500 transition-colors"
+                            >
+                                <FaYoutube size={16} />
+                            </a>
+                            <a
+                                href="https://www.facebook.com"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                    color: "#94a3b8",
+                                    backgroundColor: "#1e293b",
+                                    border: "1px solid #334155",
+                                }}
+                                className="w-9 h-9 rounded-lg flex items-center justify-center hover:text-blue-500 hover:border-blue-500 transition-colors"
+                            >
+                                <FaFacebookF size={15} />
+                            </a>
+                            <a
+                                href="https://www.instagram.com"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                    color: "#94a3b8",
+                                    backgroundColor: "#1e293b",
+                                    border: "1px solid #334155",
+                                }}
+                                className="w-9 h-9 rounded-lg flex items-center justify-center hover:text-pink-500 hover:border-pink-500 transition-colors"
+                            >
+                                <FaInstagram size={16} />
+                            </a>
                         </div>
                     </div>
 
@@ -79,26 +111,32 @@ export default function Footer() {
                             Categories
                         </h3>
                         <ul className="space-y-2">
-                            {["Earbuds", "Smartwatch", "Keyboard", "Gaming", "Power", "Webcam"].map(
-                                (cat) => (
-                                    <li key={cat}>
-                                        <Link
-                                            href={`/items?category=${cat}`}
-                                            style={{ color: "#94a3b8" }}
-                                            className="text-sm hover:text-white transition-colors"
-                                        >
-                                            {cat}
-                                        </Link>
-                                    </li>
-                                )
-                            )}
+                            {[
+                                "Earbuds",
+                                "Smartwatch",
+                                "Keyboard",
+                                "Gaming",
+                                "Power",
+                                "Webcam",
+                            ].map((cat) => (
+                                <li key={cat}>
+                                    <Link
+                                        href={`/items?category=${cat}`}
+                                        style={{ color: "#94a3b8" }}
+                                        className="text-sm hover:text-white transition-colors"
+                                    >
+                                        {cat}
+                                    </Link>
+                                </li>
+                            ))}
                         </ul>
                     </div>
-                </div>
+                </div >
 
                 {/* Bottom bar */}
-                <div
-                    style={{ borderTop: "1px solid #1e293b" }}
+                < div
+                    style={{ borderTop: "1px solid #1e293b" }
+                    }
                     className="mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3"
                 >
                     <p style={{ color: "#94a3b8" }} className="text-sm">
@@ -107,8 +145,8 @@ export default function Footer() {
                     <p style={{ color: "#94a3b8" }} className="text-sm">
                         Built with Next.js & Firebase
                     </p>
-                </div>
-            </div>
+                </div >
+            </div >
         </footer >
     );
 }
