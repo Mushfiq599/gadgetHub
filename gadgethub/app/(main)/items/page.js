@@ -1,10 +1,16 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { gadgets as seedGadgets, CATEGORIES } from "@/lib/data";
 import GadgetCard from "@/components/GadgetCard";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import {
+    Search,
+    SlidersHorizontal,
+    X,
+    ChevronLeft,
+    ChevronRight,
+} from "lucide-react";
 
 const SORT_OPTIONS = [
     { value: "default", label: "Default" },
@@ -14,28 +20,39 @@ const SORT_OPTIONS = [
     { value: "name-asc", label: "Name: A → Z" },
 ];
 
-export default function ItemsPage() {
+const ITEMS_PER_PAGE = 12;
+
+function ItemsContent() {
     const searchParams = useSearchParams();
     const initialCategory = searchParams.get("category") || "All";
 
     const [search, setSearch] = useState("");
     const [category, setCategory] = useState(initialCategory);
     const [sort, setSort] = useState("default");
-    const [allGadgets, setAllGadgets] = useState(seedGadgets);
+    const [allGadgets, setAllGadgets] = useState([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [mounted, setMounted] = useState(false);
 
-    // Merge seed data with user-added items from localStorage
+    // Load seed + localStorage only once on mount
     useEffect(() => {
         const stored = JSON.parse(
             localStorage.getItem("gadgethub_items") || "[]"
         );
         setAllGadgets([...seedGadgets, ...stored]);
+        setMounted(true);
     }, []);
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [search, category, sort]);
 
     // Filtered + sorted list
     const filtered = useMemo(() => {
+        if (!mounted) return [];
+
         let list = [...allGadgets];
 
-        // Search filter
         if (search.trim()) {
             const q = search.toLowerCase();
             list = list.filter(
@@ -46,12 +63,10 @@ export default function ItemsPage() {
             );
         }
 
-        // Category filter
         if (category !== "All") {
             list = list.filter((g) => g.category === category);
         }
 
-        // Sort
         switch (sort) {
             case "price-asc":
                 list.sort((a, b) => a.price - b.price);
@@ -70,16 +85,94 @@ export default function ItemsPage() {
         }
 
         return list;
-    }, [search, category, sort, allGadgets]);
+    }, [search, category, sort, allGadgets, mounted]);
+
+    // Pagination
+    const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    const paginatedItems = filtered.slice(startIndex, endIndex);
 
     const clearFilters = () => {
         setSearch("");
         setCategory("All");
         setSort("default");
+        setCurrentPage(1);
     };
 
     const hasActiveFilters =
         search.trim() !== "" || category !== "All" || sort !== "default";
+
+    const getPageNumbers = () => {
+        const pages = [];
+        if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) pages.push(i);
+        } else if (currentPage <= 4) {
+            pages.push(1, 2, 3, 4, 5, "...", totalPages);
+        } else if (currentPage >= totalPages - 3) {
+            pages.push(
+                1,
+                "...",
+                totalPages - 4,
+                totalPages - 3,
+                totalPages - 2,
+                totalPages - 1,
+                totalPages
+            );
+        } else {
+            pages.push(
+                1,
+                "...",
+                currentPage - 1,
+                currentPage,
+                currentPage + 1,
+                "...",
+                totalPages
+            );
+        }
+        return pages;
+    };
+
+    // Show skeleton while loading
+    if (!mounted) {
+        return (
+            <div style={{ backgroundColor: "#0f172a", minHeight: "100vh" }}>
+                <div
+                    style={{
+                        backgroundColor: "#0a1120",
+                        borderBottom: "1px solid #1e293b",
+                    }}
+                    className="py-12"
+                >
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div
+                            className="h-4 w-24 rounded mb-3"
+                            style={{ backgroundColor: "#1e293b" }}
+                        />
+                        <div
+                            className="h-8 w-48 rounded"
+                            style={{ backgroundColor: "#1e293b" }}
+                        />
+                    </div>
+                </div>
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {Array.from({ length: 12 }).map((_, i) => (
+                            <div
+                                key={i}
+                                className="rounded-2xl overflow-hidden animate-pulse"
+                                style={{
+                                    backgroundColor: "#1e293b",
+                                    border: "1px solid #334155",
+                                    height: "320px",
+                                }}
+                            />
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div style={{ backgroundColor: "#0f172a", minHeight: "100vh" }}>
@@ -92,20 +185,24 @@ export default function ItemsPage() {
                 className="py-12"
             >
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <p className="text-sm font-medium mb-1" style={{ color: "#6366f1" }}>
+                    <p
+                        className="text-sm font-medium mb-1"
+                        style={{ color: "#6366f1" }}
+                    >
                         BROWSE
                     </p>
                     <h1 className="text-3xl font-bold" style={{ color: "#f1f5f9" }}>
                         All Gadgets
                     </h1>
                     <p className="mt-2 text-sm" style={{ color: "#94a3b8" }}>
-                        {allGadgets.length} products across {CATEGORIES.length - 1} categories
+                        {allGadgets.length} products across {CATEGORIES.length - 1}{" "}
+                        categories
                     </p>
                 </div>
             </div>
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-                {/* ── Filters bar ── */}
+                {/* Filters bar */}
                 <div
                     style={{
                         backgroundColor: "#1e293b",
@@ -134,7 +231,7 @@ export default function ItemsPage() {
                         />
                     </div>
 
-                    {/* Category filter */}
+                    {/* Category */}
                     <div className="flex items-center gap-2">
                         <SlidersHorizontal size={15} style={{ color: "#94a3b8" }} />
                         <select
@@ -155,7 +252,7 @@ export default function ItemsPage() {
                         </select>
                     </div>
 
-                    {/* Sort filter */}
+                    {/* Sort */}
                     <div>
                         <select
                             value={sort}
@@ -175,7 +272,7 @@ export default function ItemsPage() {
                         </select>
                     </div>
 
-                    {/* Clear button */}
+                    {/* Clear */}
                     {hasActiveFilters && (
                         <button
                             onClick={clearFilters}
@@ -192,7 +289,7 @@ export default function ItemsPage() {
                     )}
                 </div>
 
-                {/* ── Category pill tabs ── */}
+                {/* Category pills */}
                 <div className="flex flex-wrap gap-2 mb-8">
                     {CATEGORIES.map((cat) => (
                         <button
@@ -214,32 +311,130 @@ export default function ItemsPage() {
                     ))}
                 </div>
 
-                {/* ── Results count ── */}
+                {/* Results info */}
                 <div className="flex items-center justify-between mb-6">
                     <p className="text-sm" style={{ color: "#94a3b8" }}>
                         Showing{" "}
                         <span style={{ color: "#f1f5f9" }} className="font-medium">
+                            {filtered.length === 0 ? 0 : startIndex + 1}–
+                            {Math.min(endIndex, filtered.length)}
+                        </span>{" "}
+                        of{" "}
+                        <span style={{ color: "#f1f5f9" }} className="font-medium">
                             {filtered.length}
                         </span>{" "}
-                        {filtered.length === 1 ? "result" : "results"}
+                        results
                         {category !== "All" && (
                             <span>
-                                {" "}in{" "}
-                                <span style={{ color: "#6366f1" }} className="font-medium">
+                                {" "}
+                                in{" "}
+                                <span
+                                    style={{ color: "#6366f1" }}
+                                    className="font-medium"
+                                >
                                     {category}
                                 </span>
                             </span>
                         )}
                     </p>
+                    {totalPages > 1 && (
+                        <p className="text-sm" style={{ color: "#94a3b8" }}>
+                            Page{" "}
+                            <span style={{ color: "#f1f5f9" }} className="font-medium">
+                                {currentPage}
+                            </span>{" "}
+                            of{" "}
+                            <span style={{ color: "#f1f5f9" }} className="font-medium">
+                                {totalPages}
+                            </span>
+                        </p>
+                    )}
                 </div>
 
-                {/* ── Grid ── */}
-                {filtered.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {filtered.map((gadget) => (
-                            <GadgetCard key={gadget.id} gadget={gadget} />
-                        ))}
-                    </div>
+                {/* Grid */}
+                {paginatedItems.length > 0 ? (
+                    <>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-10">
+                            {paginatedItems.map((gadget) => (
+                                <GadgetCard key={gadget.id} gadget={gadget} />
+                            ))}
+                        </div>
+
+                        {/* Pagination */}
+                        {totalPages > 1 && (
+                            <div className="flex items-center justify-center gap-2 mt-6">
+                                {/* Prev */}
+                                <button
+                                    onClick={() =>
+                                        setCurrentPage((p) => Math.max(p - 1, 1))
+                                    }
+                                    disabled={currentPage === 1}
+                                    style={{
+                                        backgroundColor: "#1e293b",
+                                        border: "1px solid #334155",
+                                        color: currentPage === 1 ? "#475569" : "#94a3b8",
+                                    }}
+                                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium hover:border-indigo-500 hover:text-white transition-colors disabled:cursor-not-allowed disabled:hover:border-slate-700 disabled:hover:text-slate-500"
+                                >
+                                    <ChevronLeft size={15} />
+                                    Prev
+                                </button>
+
+                                {/* Page numbers */}
+                                <div className="flex items-center gap-1.5">
+                                    {getPageNumbers().map((page, i) =>
+                                        page === "..." ? (
+                                            <span
+                                                key={`ellipsis-${i}`}
+                                                className="px-2 text-sm"
+                                                style={{ color: "#475569" }}
+                                            >
+                                                …
+                                            </span>
+                                        ) : (
+                                            <button
+                                                key={`page-${page}`}
+                                                onClick={() => setCurrentPage(page)}
+                                                style={{
+                                                    backgroundColor:
+                                                        currentPage === page ? "#6366f1" : "#1e293b",
+                                                    border:
+                                                        currentPage === page
+                                                            ? "1px solid #6366f1"
+                                                            : "1px solid #334155",
+                                                    color:
+                                                        currentPage === page ? "white" : "#94a3b8",
+                                                    minWidth: "38px",
+                                                    height: "36px",
+                                                }}
+                                                className="px-3 rounded-xl text-sm font-medium hover:border-indigo-500 hover:text-white transition-colors"
+                                            >
+                                                {page}
+                                            </button>
+                                        )
+                                    )}
+                                </div>
+
+                                {/* Next */}
+                                <button
+                                    onClick={() =>
+                                        setCurrentPage((p) => Math.min(p + 1, totalPages))
+                                    }
+                                    disabled={currentPage === totalPages}
+                                    style={{
+                                        backgroundColor: "#1e293b",
+                                        border: "1px solid #334155",
+                                        color:
+                                            currentPage === totalPages ? "#475569" : "#94a3b8",
+                                    }}
+                                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium hover:border-indigo-500 hover:text-white transition-colors disabled:cursor-not-allowed disabled:hover:border-slate-700 disabled:hover:text-slate-500"
+                                >
+                                    Next
+                                    <ChevronRight size={15} />
+                                </button>
+                            </div>
+                        )}
+                    </>
                 ) : (
                     <div className="flex flex-col items-center justify-center py-24 text-center">
                         <div
@@ -268,5 +463,24 @@ export default function ItemsPage() {
                 )}
             </div>
         </div>
+    );
+}
+
+export default function ItemsPage() {
+    return (
+        <Suspense
+            fallback={
+                <div
+                    style={{ backgroundColor: "#0f172a", minHeight: "100vh" }}
+                    className="flex items-center justify-center"
+                >
+                    <div
+                        className="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin"
+                    />
+                </div>
+            }
+        >
+            <ItemsContent />
+        </Suspense>
     );
 }
