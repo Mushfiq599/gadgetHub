@@ -3,9 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth, DEMO_CREDENTIALS } from "@/context/AuthContext";
 import toast from "react-hot-toast";
-import { Cpu, Mail, Lock, Eye, EyeOff, LogIn } from "lucide-react";
+import { Cpu, Mail, Lock, Eye, EyeOff, LogIn, ShieldCheck, User } from "lucide-react";
 
 export default function LoginPage() {
     const { login, loginWithGoogle } = useAuth();
@@ -19,10 +19,7 @@ export default function LoginPage() {
 
     const handleLogin = async (e) => {
         e.preventDefault();
-        if (!email || !password) {
-            toast.error("Please fill in all fields");
-            return;
-        }
+        if (!email || !password) { toast.error("Please fill in all fields"); return; }
         setLoading(true);
         try {
             await login(email, password);
@@ -30,11 +27,9 @@ export default function LoginPage() {
             router.push("/");
         } catch (err) {
             const msg =
-                err.code === "auth/invalid-credential"
-                    ? "Invalid email or password"
-                    : err.code === "auth/too-many-requests"
-                        ? "Too many attempts. Try again later."
-                        : "Login failed. Please try again.";
+                err.code === "auth/invalid-credential" ? "Invalid email or password" :
+                    err.code === "auth/too-many-requests" ? "Too many attempts. Try again later." :
+                        "Login failed. Please try again.";
             toast.error(msg);
         } finally {
             setLoading(false);
@@ -47,11 +42,19 @@ export default function LoginPage() {
             await loginWithGoogle();
             toast.success("Welcome to GadgetHub!");
             router.push("/");
-        } catch (err) {
+        } catch {
             toast.error("Google sign-in failed. Please try again.");
         } finally {
             setGoogleLoading(false);
         }
+    };
+
+    // Fill form with demo credentials
+    const fillDemo = (type) => {
+        const creds = DEMO_CREDENTIALS[type];
+        setEmail(creds.email);
+        setPassword(creds.password);
+        toast.success(`${creds.label} credentials filled!`);
     };
 
     return (
@@ -82,7 +85,92 @@ export default function LoginPage() {
                     </p>
                 </div>
 
-                {/* Card */}
+                {/* ── Demo credentials ── */}
+                <div
+                    style={{
+                        backgroundColor: "#1e293b",
+                        border: "1px solid #334155",
+                    }}
+                    className="rounded-2xl p-4 mb-4"
+                >
+                    <p
+                        className="text-xs font-semibold uppercase tracking-wider mb-3"
+                        style={{ color: "#94a3b8" }}
+                    >
+                        Quick Demo Access
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+
+                        {/* Demo Admin */}
+                        <button
+                            onClick={() => fillDemo("admin")}
+                            style={{
+                                backgroundColor: "rgba(99,102,241,0.1)",
+                                border: "1px solid rgba(99,102,241,0.3)",
+                            }}
+                            className="flex flex-col items-start p-3 rounded-xl hover:border-indigo-500 transition-colors text-left"
+                        >
+                            <div className="flex items-center gap-2 mb-2">
+                                <div
+                                    className="w-7 h-7 rounded-lg flex items-center justify-center"
+                                    style={{ backgroundColor: "rgba(99,102,241,0.2)" }}
+                                >
+                                    <ShieldCheck size={14} style={{ color: "#6366f1" }} />
+                                </div>
+                                <span
+                                    className="text-xs font-bold"
+                                    style={{ color: "#6366f1" }}
+                                >
+                                    Demo Admin
+                                </span>
+                            </div>
+                            <p className="text-xs" style={{ color: "#94a3b8" }}>
+                                {DEMO_CREDENTIALS.admin.email}
+                            </p>
+                            <p className="text-xs mt-0.5" style={{ color: "#475569" }}>
+                                Pass: {DEMO_CREDENTIALS.admin.password}
+                            </p>
+                        </button>
+
+                        {/* Demo User */}
+                        <button
+                            onClick={() => fillDemo("user")}
+                            style={{
+                                backgroundColor: "rgba(34,197,94,0.08)",
+                                border: "1px solid rgba(34,197,94,0.25)",
+                            }}
+                            className="flex flex-col items-start p-3 rounded-xl hover:border-green-500 transition-colors text-left"
+                        >
+                            <div className="flex items-center gap-2 mb-2">
+                                <div
+                                    className="w-7 h-7 rounded-lg flex items-center justify-center"
+                                    style={{ backgroundColor: "rgba(34,197,94,0.15)" }}
+                                >
+                                    <User size={14} style={{ color: "#22c55e" }} />
+                                </div>
+                                <span
+                                    className="text-xs font-bold"
+                                    style={{ color: "#22c55e" }}
+                                >
+                                    Demo User
+                                </span>
+                            </div>
+                            <p className="text-xs" style={{ color: "#94a3b8" }}>
+                                {DEMO_CREDENTIALS.user.email}
+                            </p>
+                            <p className="text-xs mt-0.5" style={{ color: "#475569" }}>
+                                Pass: {DEMO_CREDENTIALS.user.password}
+                            </p>
+                            
+                        </button>
+                    </div>
+
+                    <p className="text-xs mt-3 text-center" style={{ color: "#475569" }}>
+                        Click a card to auto-fill credentials, then sign in
+                    </p>
+                </div>
+
+                {/* Login card */}
                 <div
                     style={{
                         backgroundColor: "#1e293b",
@@ -90,7 +178,7 @@ export default function LoginPage() {
                     }}
                     className="rounded-2xl p-8"
                 >
-                    {/* Google button */}
+                    {/* Google */}
                     <button
                         onClick={handleGoogle}
                         disabled={googleLoading}
@@ -101,7 +189,6 @@ export default function LoginPage() {
                         }}
                         className="w-full flex items-center justify-center gap-3 py-3 rounded-xl text-sm font-medium hover:border-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mb-6"
                     >
-                        {/* Google SVG icon */}
                         <svg width="18" height="18" viewBox="0 0 48 48">
                             <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
                             <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
@@ -125,18 +212,11 @@ export default function LoginPage() {
 
                         {/* Email */}
                         <div>
-                            <label
-                                className="block text-sm font-medium mb-2"
-                                style={{ color: "#94a3b8" }}
-                            >
+                            <label className="block text-sm font-medium mb-2" style={{ color: "#94a3b8" }}>
                                 Email address
                             </label>
                             <div className="relative">
-                                <Mail
-                                    size={16}
-                                    className="absolute left-3 top-1/2 -translate-y-1/2"
-                                    style={{ color: "#94a3b8" }}
-                                />
+                                <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "#94a3b8" }} />
                                 <input
                                     type="email"
                                     value={email}
@@ -154,18 +234,11 @@ export default function LoginPage() {
 
                         {/* Password */}
                         <div>
-                            <label
-                                className="block text-sm font-medium mb-2"
-                                style={{ color: "#94a3b8" }}
-                            >
+                            <label className="block text-sm font-medium mb-2" style={{ color: "#94a3b8" }}>
                                 Password
                             </label>
                             <div className="relative">
-                                <Lock
-                                    size={16}
-                                    className="absolute left-3 top-1/2 -translate-y-1/2"
-                                    style={{ color: "#94a3b8" }}
-                                />
+                                <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "#94a3b8" }} />
                                 <input
                                     type={showPassword ? "text" : "password"}
                                     value={password}
@@ -214,11 +287,7 @@ export default function LoginPage() {
                 {/* Footer link */}
                 <p className="text-center text-sm mt-6" style={{ color: "#94a3b8" }}>
                     Don&apos;t have an account?{" "}
-                    <Link
-                        href="/register"
-                        style={{ color: "#6366f1" }}
-                        className="font-medium hover:opacity-80 transition-opacity"
-                    >
+                    <Link href="/register" style={{ color: "#6366f1" }} className="font-medium hover:opacity-80 transition-opacity">
                         Create one
                     </Link>
                 </p>
