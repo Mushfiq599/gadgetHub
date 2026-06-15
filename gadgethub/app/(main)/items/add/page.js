@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import toast from "react-hot-toast";
 import {
@@ -14,6 +15,7 @@ import {
     Image as ImageIcon,
     Loader2,
     Package,
+    ShieldCheck,
 } from "lucide-react";
 import { CATEGORIES } from "@/lib/data";
 
@@ -21,8 +23,8 @@ const CATEGORY_OPTIONS = CATEGORIES.filter((c) => c !== "All");
 
 export default function AddItemPage() {
     const { user, loading } = useProtectedRoute();
+    const { role } = useAuth();
     const router = useRouter();
-
     const [submitting, setSubmitting] = useState(false);
     const [form, setForm] = useState({
         title: "",
@@ -35,6 +37,14 @@ export default function AddItemPage() {
         imageUrl: "",
     });
 
+    // Block non-admin users
+    useEffect(() => {
+        if (!loading && user && role === "user") {
+            toast.error("Access denied. Admins only.");
+            router.push("/");
+        }
+    }, [user, role, loading, router]);
+
     const handleChange = (e) => {
         setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     };
@@ -42,7 +52,6 @@ export default function AddItemPage() {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Basic validation
         if (
             !form.title ||
             !form.category ||
@@ -68,9 +77,7 @@ export default function AddItemPage() {
         }
 
         setSubmitting(true);
-
         try {
-            // Build the new gadget object
             const newGadget = {
                 id: `user-${Date.now()}`,
                 title: form.title.trim(),
@@ -88,7 +95,6 @@ export default function AddItemPage() {
                 createdAt: new Date().toISOString().split("T")[0],
             };
 
-            // Save to localStorage
             const existing = JSON.parse(
                 localStorage.getItem("gadgethub_items") || "[]"
             );
@@ -97,15 +103,15 @@ export default function AddItemPage() {
 
             toast.success("Gadget added successfully!");
             router.push("/items/manage");
-        } catch (err) {
+        } catch {
             toast.error("Something went wrong. Please try again.");
         } finally {
             setSubmitting(false);
         }
     };
 
-    // Show loading spinner while auth resolves
-    if (loading) {
+    // ── Loading / access check ──
+    if (loading || !user || role !== "admin") {
         return (
             <div
                 style={{ backgroundColor: "#0f172a", minHeight: "100vh" }}
@@ -120,17 +126,12 @@ export default function AddItemPage() {
         );
     }
 
-    // useProtectedRoute handles redirect; this prevents flash
-    if (!user) return null;
-
     return (
         <div style={{ backgroundColor: "#0f172a", minHeight: "100vh" }}>
-            {/* Page header */}
+
+            {/* Header */}
             <div
-                style={{
-                    backgroundColor: "#0a1120",
-                    borderBottom: "1px solid #1e293b",
-                }}
+                style={{ backgroundColor: "#0a1120", borderBottom: "1px solid #1e293b" }}
                 className="py-12"
             >
                 <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -142,22 +143,32 @@ export default function AddItemPage() {
                             <PlusCircle size={20} style={{ color: "#6366f1" }} />
                         </div>
                         <div>
-                            <p
-                                className="text-xs font-medium uppercase tracking-wider"
-                                style={{ color: "#6366f1" }}
-                            >
-                                Protected Page
-                            </p>
-                            <h1
-                                className="text-2xl font-bold"
-                                style={{ color: "#f1f5f9" }}
-                            >
+                            <div className="flex items-center gap-2">
+                                <p
+                                    className="text-xs font-medium uppercase tracking-wider"
+                                    style={{ color: "#6366f1" }}
+                                >
+                                    Admin Only
+                                </p>
+                                <span
+                                    className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full"
+                                    style={{
+                                        backgroundColor: "rgba(99,102,241,0.15)",
+                                        color: "#6366f1",
+                                        border: "1px solid rgba(99,102,241,0.3)",
+                                    }}
+                                >
+                                    <ShieldCheck size={10} />
+                                    Admin
+                                </span>
+                            </div>
+                            <h1 className="text-2xl font-bold" style={{ color: "#f1f5f9" }}>
                                 Add a Gadget
                             </h1>
                         </div>
                     </div>
                     <p className="text-sm mt-2" style={{ color: "#94a3b8" }}>
-                        Fill in the details below to add a new gadget to your collection.
+                        Fill in the details below to add a new gadget to the catalogue.
                     </p>
                 </div>
             </div>
@@ -168,10 +179,7 @@ export default function AddItemPage() {
 
                     {/* ── Basic Info ── */}
                     <div
-                        style={{
-                            backgroundColor: "#1e293b",
-                            border: "1px solid #334155",
-                        }}
+                        style={{ backgroundColor: "#1e293b", border: "1px solid #334155" }}
                         className="rounded-2xl p-6 sm:p-8"
                     >
                         <h2
@@ -256,26 +264,18 @@ export default function AddItemPage() {
                                     }}
                                     className="w-full px-4 py-3 rounded-xl text-sm outline-none focus:border-indigo-500 transition-colors cursor-pointer"
                                 >
-                                    <option value="" disabled>
-                                        Select a category
-                                    </option>
+                                    <option value="" disabled>Select a category</option>
                                     {CATEGORY_OPTIONS.map((cat) => (
-                                        <option key={cat} value={cat}>
-                                            {cat}
-                                        </option>
+                                        <option key={cat} value={cat}>{cat}</option>
                                     ))}
                                 </select>
                             </div>
-
                         </div>
                     </div>
 
                     {/* ── Descriptions ── */}
                     <div
-                        style={{
-                            backgroundColor: "#1e293b",
-                            border: "1px solid #334155",
-                        }}
+                        style={{ backgroundColor: "#1e293b", border: "1px solid #334155" }}
                         className="rounded-2xl p-6 sm:p-8"
                     >
                         <h2
@@ -288,7 +288,7 @@ export default function AddItemPage() {
 
                         <div className="space-y-5">
 
-                            {/* Short description */}
+                            {/* Short */}
                             <div>
                                 <label
                                     className="block text-sm font-medium mb-2"
@@ -296,10 +296,7 @@ export default function AddItemPage() {
                                 >
                                     Short Description{" "}
                                     <span style={{ color: "#ef4444" }}>*</span>
-                                    <span
-                                        className="ml-2 font-normal text-xs"
-                                        style={{ color: "#475569" }}
-                                    >
+                                    <span className="ml-2 font-normal text-xs" style={{ color: "#475569" }}>
                                         (shown on cards)
                                     </span>
                                 </label>
@@ -313,7 +310,7 @@ export default function AddItemPage() {
                                         name="shortDescription"
                                         value={form.shortDescription}
                                         onChange={handleChange}
-                                        placeholder="A brief one-line summary of the gadget..."
+                                        placeholder="A brief one-line summary..."
                                         rows={2}
                                         style={{
                                             backgroundColor: "#0f172a",
@@ -326,7 +323,7 @@ export default function AddItemPage() {
                                 </div>
                             </div>
 
-                            {/* Full description */}
+                            {/* Full */}
                             <div>
                                 <label
                                     className="block text-sm font-medium mb-2"
@@ -334,10 +331,7 @@ export default function AddItemPage() {
                                 >
                                     Full Description{" "}
                                     <span style={{ color: "#ef4444" }}>*</span>
-                                    <span
-                                        className="ml-2 font-normal text-xs"
-                                        style={{ color: "#475569" }}
-                                    >
+                                    <span className="ml-2 font-normal text-xs" style={{ color: "#475569" }}>
                                         (shown on detail page)
                                     </span>
                                 </label>
@@ -345,7 +339,7 @@ export default function AddItemPage() {
                                     name="fullDescription"
                                     value={form.fullDescription}
                                     onChange={handleChange}
-                                    placeholder="Write a detailed description covering features, performance, and what makes this gadget stand out..."
+                                    placeholder="Write a detailed description covering features, performance..."
                                     rows={5}
                                     style={{
                                         backgroundColor: "#0f172a",
@@ -361,10 +355,7 @@ export default function AddItemPage() {
 
                     {/* ── Pricing & Rating ── */}
                     <div
-                        style={{
-                            backgroundColor: "#1e293b",
-                            border: "1px solid #334155",
-                        }}
+                        style={{ backgroundColor: "#1e293b", border: "1px solid #334155" }}
                         className="rounded-2xl p-6 sm:p-8"
                     >
                         <h2
@@ -416,10 +407,7 @@ export default function AddItemPage() {
                                     style={{ color: "#94a3b8" }}
                                 >
                                     Rating{" "}
-                                    <span
-                                        className="font-normal text-xs"
-                                        style={{ color: "#475569" }}
-                                    >
+                                    <span className="font-normal text-xs" style={{ color: "#475569" }}>
                                         (1–5, optional)
                                     </span>
                                 </label>
@@ -452,10 +440,7 @@ export default function AddItemPage() {
 
                     {/* ── Image ── */}
                     <div
-                        style={{
-                            backgroundColor: "#1e293b",
-                            border: "1px solid #334155",
-                        }}
+                        style={{ backgroundColor: "#1e293b", border: "1px solid #334155" }}
                         className="rounded-2xl p-6 sm:p-8"
                     >
                         <h2
@@ -472,11 +457,8 @@ export default function AddItemPage() {
                                 style={{ color: "#94a3b8" }}
                             >
                                 Image URL{" "}
-                                <span
-                                    className="font-normal text-xs"
-                                    style={{ color: "#475569" }}
-                                >
-                                    (optional — a default will be used if left blank)
+                                <span className="font-normal text-xs" style={{ color: "#475569" }}>
+                                    (optional — a default will be used if blank)
                                 </span>
                             </label>
                             <div className="relative">
@@ -500,21 +482,16 @@ export default function AddItemPage() {
                                 />
                             </div>
 
-                            {/* Image preview */}
+                            {/* Preview */}
                             {form.imageUrl && (
                                 <div className="mt-4">
-                                    <p
-                                        className="text-xs mb-2"
-                                        style={{ color: "#94a3b8" }}
-                                    >
+                                    <p className="text-xs mb-2" style={{ color: "#94a3b8" }}>
                                         Preview:
                                     </p>
                                     <img
                                         src={form.imageUrl}
                                         alt="Preview"
-                                        onError={(e) => {
-                                            e.target.style.display = "none";
-                                        }}
+                                        onError={(e) => { e.target.style.display = "none"; }}
                                         className="h-40 w-full object-cover rounded-xl"
                                         style={{ border: "1px solid #334155" }}
                                     />
@@ -546,10 +523,7 @@ export default function AddItemPage() {
                         <button
                             type="button"
                             onClick={() => router.push("/items/manage")}
-                            style={{
-                                color: "#94a3b8",
-                                border: "1px solid #334155",
-                            }}
+                            style={{ color: "#94a3b8", border: "1px solid #334155" }}
                             className="sm:w-40 py-3.5 rounded-xl text-sm font-medium hover:text-white hover:border-indigo-500 transition-colors"
                         >
                             Cancel

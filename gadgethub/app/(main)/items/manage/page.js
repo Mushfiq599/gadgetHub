@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import toast from "react-hot-toast";
 import { gadgets as seedGadgets } from "@/lib/data";
@@ -17,43 +19,42 @@ import {
     Tag,
     AlertTriangle,
     X,
+    ShieldCheck,
 } from "lucide-react";
 
 export default function ManageItemsPage() {
     const { user, loading } = useProtectedRoute();
+    const { role } = useAuth();
+    const router = useRouter();
     const [items, setItems] = useState([]);
-    const [deleteTarget, setDeleteTarget] = useState(null); // item to confirm delete
+    const [deleteTarget, setDeleteTarget] = useState(null);
 
-    // Load items: seed data + user-added from localStorage
+    // Block non-admin users
     useEffect(() => {
-        if (!user) return;
+        if (!loading && user && role === "user") {
+            toast.error("Access denied. Admins only.");
+            router.push("/");
+        }
+    }, [user, role, loading, router]);
 
-        const stored = JSON.parse(
-            localStorage.getItem("gadgethub_items") || "[]"
-        );
-        // Only show items added by this user from localStorage
-        const userStored = stored.filter((i) => i.addedBy === user.uid);
-        // Combine seed gadgets (visible to everyone) + user's own added items
-        setItems([...seedGadgets, ...userStored]);
-    }, [user]);
+    // Load items
+    useEffect(() => {
+        if (!user || role !== "admin") return;
+        const stored = JSON.parse(localStorage.getItem("gadgethub_items") || "[]");
+        const userAdded = stored.filter((i) => i.addedBy);
+        setItems([...seedGadgets, ...userAdded]);
+    }, [user, role]);
 
-    const handleDelete = (item) => {
-        setDeleteTarget(item);
-    };
+    const handleDelete = (item) => setDeleteTarget(item);
 
     const confirmDelete = () => {
         if (!deleteTarget) return;
-
-        // Seed items cannot be deleted (no addedBy)
         if (!deleteTarget.addedBy) {
             toast.error("Seed gadgets cannot be deleted");
             setDeleteTarget(null);
             return;
         }
-
-        const stored = JSON.parse(
-            localStorage.getItem("gadgethub_items") || "[]"
-        );
+        const stored = JSON.parse(localStorage.getItem("gadgethub_items") || "[]");
         const updated = stored.filter((i) => i.id !== deleteTarget.id);
         localStorage.setItem("gadgethub_items", JSON.stringify(updated));
         setItems((prev) => prev.filter((i) => i.id !== deleteTarget.id));
@@ -61,8 +62,8 @@ export default function ManageItemsPage() {
         setDeleteTarget(null);
     };
 
-    // ── Loading state ──
-    if (loading) {
+    // ── Loading / access check ──
+    if (loading || !user || role !== "admin") {
         return (
             <div
                 style={{ backgroundColor: "#0f172a", minHeight: "100vh" }}
@@ -77,19 +78,14 @@ export default function ManageItemsPage() {
         );
     }
 
-    if (!user) return null;
-
-    const userAddedCount = items.filter((i) => i.addedBy === user.uid).length;
+    const userAddedCount = items.filter((i) => i.addedBy).length;
 
     return (
         <div style={{ backgroundColor: "#0f172a", minHeight: "100vh" }}>
 
-            {/* ── Page header ── */}
+            {/* Header */}
             <div
-                style={{
-                    backgroundColor: "#0a1120",
-                    borderBottom: "1px solid #1e293b",
-                }}
+                style={{ backgroundColor: "#0a1120", borderBottom: "1px solid #1e293b" }}
                 className="py-12"
             >
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -102,16 +98,26 @@ export default function ManageItemsPage() {
                                 <LayoutDashboard size={20} style={{ color: "#6366f1" }} />
                             </div>
                             <div>
-                                <p
-                                    className="text-xs font-medium uppercase tracking-wider"
-                                    style={{ color: "#6366f1" }}
-                                >
-                                    Protected Page
-                                </p>
-                                <h1
-                                    className="text-2xl font-bold"
-                                    style={{ color: "#f1f5f9" }}
-                                >
+                                <div className="flex items-center gap-2">
+                                    <p
+                                        className="text-xs font-medium uppercase tracking-wider"
+                                        style={{ color: "#6366f1" }}
+                                    >
+                                        Admin Only
+                                    </p>
+                                    <span
+                                        className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full"
+                                        style={{
+                                            backgroundColor: "rgba(99,102,241,0.15)",
+                                            color: "#6366f1",
+                                            border: "1px solid rgba(99,102,241,0.3)",
+                                        }}
+                                    >
+                                        <ShieldCheck size={10} />
+                                        Admin
+                                    </span>
+                                </div>
+                                <h1 className="text-2xl font-bold" style={{ color: "#f1f5f9" }}>
                                     Manage Items
                                 </h1>
                             </div>
@@ -126,37 +132,19 @@ export default function ManageItemsPage() {
                         </Link>
                     </div>
 
-                    {/* Stats row */}
+                    {/* Stats */}
                     <div className="flex flex-wrap gap-4 mt-6">
                         {[
-                            {
-                                label: "Total Gadgets",
-                                value: items.length,
-                                color: "#6366f1",
-                            },
-                            {
-                                label: "Added by You",
-                                value: userAddedCount,
-                                color: "#22c55e",
-                            },
-                            {
-                                label: "Seed Gadgets",
-                                value: seedGadgets.length,
-                                color: "#22d3ee",
-                            },
+                            { label: "Total Gadgets", value: items.length, color: "#6366f1" },
+                            { label: "Admin Added", value: userAddedCount, color: "#22c55e" },
+                            { label: "Seed Gadgets", value: seedGadgets.length, color: "#22d3ee" },
                         ].map((stat) => (
                             <div
                                 key={stat.label}
-                                style={{
-                                    backgroundColor: "#1e293b",
-                                    border: "1px solid #334155",
-                                }}
+                                style={{ backgroundColor: "#1e293b", border: "1px solid #334155" }}
                                 className="flex items-center gap-3 px-5 py-3 rounded-xl"
                             >
-                                <span
-                                    className="text-2xl font-bold"
-                                    style={{ color: stat.color }}
-                                >
+                                <span className="text-2xl font-bold" style={{ color: stat.color }}>
                                     {stat.value}
                                 </span>
                                 <span className="text-sm" style={{ color: "#94a3b8" }}>
@@ -168,11 +156,9 @@ export default function ManageItemsPage() {
                 </div>
             </div>
 
-            {/* ── Table ── */}
+            {/* Table */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-
                 {items.length === 0 ? (
-                    // Empty state
                     <div className="flex flex-col items-center justify-center py-24 text-center">
                         <div
                             className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
@@ -180,10 +166,7 @@ export default function ManageItemsPage() {
                         >
                             <Package size={28} style={{ color: "#334155" }} />
                         </div>
-                        <h3
-                            className="text-lg font-semibold mb-2"
-                            style={{ color: "#f1f5f9" }}
-                        >
+                        <h3 className="text-lg font-semibold mb-2" style={{ color: "#f1f5f9" }}>
                             No gadgets yet
                         </h3>
                         <p className="text-sm mb-6" style={{ color: "#94a3b8" }}>
@@ -200,25 +183,15 @@ export default function ManageItemsPage() {
                     </div>
                 ) : (
                     <>
-                        {/* ── Desktop table ── */}
+                        {/* Desktop table */}
                         <div
                             className="hidden md:block rounded-2xl overflow-hidden"
-                            style={{
-                                backgroundColor: "#1e293b",
-                                border: "1px solid #334155",
-                            }}
+                            style={{ backgroundColor: "#1e293b", border: "1px solid #334155" }}
                         >
                             <table className="w-full">
                                 <thead>
                                     <tr style={{ borderBottom: "1px solid #334155" }}>
-                                        {[
-                                            "Gadget",
-                                            "Category",
-                                            "Price",
-                                            "Rating",
-                                            "Source",
-                                            "Actions",
-                                        ].map((h) => (
+                                        {["Gadget", "Category", "Price", "Rating", "Source", "Actions"].map((h) => (
                                             <th
                                                 key={h}
                                                 className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider"
@@ -234,14 +207,11 @@ export default function ManageItemsPage() {
                                         <tr
                                             key={item.id}
                                             style={{
-                                                borderBottom:
-                                                    index < items.length - 1
-                                                        ? "1px solid #334155"
-                                                        : "none",
+                                                borderBottom: index < items.length - 1 ? "1px solid #334155" : "none",
                                             }}
                                             className="hover:bg-white/[0.02] transition-colors"
                                         >
-                                            {/* Gadget info */}
+                                            {/* Gadget */}
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
                                                     <div
@@ -253,6 +223,7 @@ export default function ManageItemsPage() {
                                                             alt={item.title}
                                                             fill
                                                             className="object-cover"
+                                                            unoptimized={!!item.addedBy}
                                                         />
                                                     </div>
                                                     <div>
@@ -262,10 +233,7 @@ export default function ManageItemsPage() {
                                                         >
                                                             {item.title}
                                                         </p>
-                                                        <p
-                                                            className="text-xs mt-0.5"
-                                                            style={{ color: "#94a3b8" }}
-                                                        >
+                                                        <p className="text-xs mt-0.5" style={{ color: "#94a3b8" }}>
                                                             {item.brand}
                                                         </p>
                                                     </div>
@@ -289,10 +257,7 @@ export default function ManageItemsPage() {
 
                                             {/* Price */}
                                             <td className="px-6 py-4">
-                                                <span
-                                                    className="text-sm font-bold"
-                                                    style={{ color: "#6366f1" }}
-                                                >
+                                                <span className="text-sm font-bold" style={{ color: "#6366f1" }}>
                                                     ${item.price.toFixed(2)}
                                                 </span>
                                             </td>
@@ -300,21 +265,14 @@ export default function ManageItemsPage() {
                                             {/* Rating */}
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-1.5">
-                                                    <Star
-                                                        size={13}
-                                                        fill="#f59e0b"
-                                                        style={{ color: "#f59e0b" }}
-                                                    />
-                                                    <span
-                                                        className="text-sm font-medium"
-                                                        style={{ color: "#f1f5f9" }}
-                                                    >
+                                                    <Star size={13} fill="#f59e0b" style={{ color: "#f59e0b" }} />
+                                                    <span className="text-sm font-medium" style={{ color: "#f1f5f9" }}>
                                                         {item.rating > 0 ? item.rating : "—"}
                                                     </span>
                                                 </div>
                                             </td>
 
-                                            {/* Source badge */}
+                                            {/* Source */}
                                             <td className="px-6 py-4">
                                                 <span
                                                     className="text-xs font-medium px-2.5 py-1 rounded-full"
@@ -332,7 +290,7 @@ export default function ManageItemsPage() {
                                                             }
                                                     }
                                                 >
-                                                    {item.addedBy ? "Your item" : "Seed"}
+                                                    {item.addedBy ? "Admin Added" : "Seed"}
                                                 </span>
                                             </td>
 
@@ -381,15 +339,12 @@ export default function ManageItemsPage() {
                             </table>
                         </div>
 
-                        {/* ── Mobile cards ── */}
+                        {/* Mobile cards */}
                         <div className="md:hidden space-y-4">
                             {items.map((item) => (
                                 <div
                                     key={item.id}
-                                    style={{
-                                        backgroundColor: "#1e293b",
-                                        border: "1px solid #334155",
-                                    }}
+                                    style={{ backgroundColor: "#1e293b", border: "1px solid #334155" }}
                                     className="rounded-2xl p-4"
                                 >
                                     <div className="flex items-start gap-3 mb-4">
@@ -402,6 +357,7 @@ export default function ManageItemsPage() {
                                                 alt={item.title}
                                                 fill
                                                 className="object-cover"
+                                                unoptimized={!!item.addedBy}
                                             />
                                         </div>
                                         <div className="flex-1 min-w-0">
@@ -411,10 +367,7 @@ export default function ManageItemsPage() {
                                             >
                                                 {item.title}
                                             </p>
-                                            <p
-                                                className="text-xs mt-0.5"
-                                                style={{ color: "#94a3b8" }}
-                                            >
+                                            <p className="text-xs mt-0.5" style={{ color: "#94a3b8" }}>
                                                 {item.brand}
                                             </p>
                                             <div className="flex items-center gap-2 mt-2">
@@ -431,17 +384,11 @@ export default function ManageItemsPage() {
                                                     className="text-xs font-medium px-2 py-0.5 rounded-full"
                                                     style={
                                                         item.addedBy
-                                                            ? {
-                                                                backgroundColor: "rgba(34,197,94,0.1)",
-                                                                color: "#22c55e",
-                                                            }
-                                                            : {
-                                                                backgroundColor: "rgba(34,211,238,0.1)",
-                                                                color: "#22d3ee",
-                                                            }
+                                                            ? { backgroundColor: "rgba(34,197,94,0.1)", color: "#22c55e" }
+                                                            : { backgroundColor: "rgba(34,211,238,0.1)", color: "#22d3ee" }
                                                     }
                                                 >
-                                                    {item.addedBy ? "Your item" : "Seed"}
+                                                    {item.addedBy ? "Admin Added" : "Seed"}
                                                 </span>
                                             </div>
                                         </div>
@@ -452,17 +399,11 @@ export default function ManageItemsPage() {
                                         style={{ borderTop: "1px solid #334155" }}
                                     >
                                         <div className="flex items-center gap-4">
-                                            <span
-                                                className="text-sm font-bold"
-                                                style={{ color: "#6366f1" }}
-                                            >
+                                            <span className="text-sm font-bold" style={{ color: "#6366f1" }}>
                                                 ${item.price.toFixed(2)}
                                             </span>
                                             {item.rating > 0 && (
-                                                <span
-                                                    className="flex items-center gap-1 text-sm"
-                                                    style={{ color: "#f59e0b" }}
-                                                >
+                                                <span className="flex items-center gap-1 text-sm" style={{ color: "#f59e0b" }}>
                                                     <Star size={12} fill="#f59e0b" />
                                                     {item.rating}
                                                 </span>
@@ -512,20 +453,16 @@ export default function ManageItemsPage() {
                 )}
             </div>
 
-            {/* ── Delete confirm modal ── */}
+            {/* Delete modal */}
             {deleteTarget && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center px-4"
                     style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
                 >
                     <div
-                        style={{
-                            backgroundColor: "#1e293b",
-                            border: "1px solid #334155",
-                        }}
+                        style={{ backgroundColor: "#1e293b", border: "1px solid #334155" }}
                         className="w-full max-w-md rounded-2xl p-6 shadow-2xl"
                     >
-                        {/* Modal header */}
                         <div className="flex items-start justify-between mb-4">
                             <div className="flex items-center gap-3">
                                 <div
@@ -534,10 +471,7 @@ export default function ManageItemsPage() {
                                 >
                                     <AlertTriangle size={20} style={{ color: "#ef4444" }} />
                                 </div>
-                                <h3
-                                    className="text-base font-bold"
-                                    style={{ color: "#f1f5f9" }}
-                                >
+                                <h3 className="text-base font-bold" style={{ color: "#f1f5f9" }}>
                                     Delete Gadget
                                 </h3>
                             </div>
@@ -549,20 +483,15 @@ export default function ManageItemsPage() {
                                 <X size={20} />
                             </button>
                         </div>
-
                         <p className="text-sm mb-2" style={{ color: "#94a3b8" }}>
                             Are you sure you want to delete:
                         </p>
-                        <p
-                            className="text-sm font-semibold mb-6"
-                            style={{ color: "#f1f5f9" }}
-                        >
+                        <p className="text-sm font-semibold mb-2" style={{ color: "#f1f5f9" }}>
                             &ldquo;{deleteTarget.title}&rdquo;
                         </p>
                         <p className="text-xs mb-6" style={{ color: "#94a3b8" }}>
                             This action cannot be undone.
                         </p>
-
                         <div className="flex gap-3">
                             <button
                                 onClick={confirmDelete}
@@ -573,10 +502,7 @@ export default function ManageItemsPage() {
                             </button>
                             <button
                                 onClick={() => setDeleteTarget(null)}
-                                style={{
-                                    color: "#94a3b8",
-                                    border: "1px solid #334155",
-                                }}
+                                style={{ color: "#94a3b8", border: "1px solid #334155" }}
                                 className="flex-1 py-2.5 rounded-xl text-sm font-medium hover:text-white hover:border-indigo-500 transition-colors"
                             >
                                 Cancel
@@ -585,7 +511,6 @@ export default function ManageItemsPage() {
                     </div>
                 </div>
             )}
-
         </div>
     );
 }
