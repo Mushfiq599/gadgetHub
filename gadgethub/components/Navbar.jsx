@@ -4,17 +4,17 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useCart } from "@/context/CartContext";
 import toast from "react-hot-toast";
 import {
     Cpu,
     Menu,
     X,
     ChevronDown,
-    User,
-    PlusCircle,
-    LayoutDashboard,
     LogOut,
+    ShieldCheck,
 } from "lucide-react";
+import { FiPlusCircle, FiLayout, FiShoppingCart, FiPackage, FiUser } from "react-icons/fi";
 
 const navLinks = [
     { href: "/", label: "Home" },
@@ -23,7 +23,8 @@ const navLinks = [
 ];
 
 export default function Navbar() {
-    const { user, logout } = useAuth();
+    const { user, role, logout } = useAuth();
+    const { cartCount } = useCart();
     const pathname = usePathname();
     const router = useRouter();
 
@@ -31,18 +32,18 @@ export default function Navbar() {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
 
-    // Close dropdown when clicking outside
+    // Close dropdown on outside click
     useEffect(() => {
-        function handleClickOutside(e) {
+        function handle(e) {
             if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
                 setDropdownOpen(false);
             }
         }
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
+        document.addEventListener("mousedown", handle);
+        return () => document.removeEventListener("mousedown", handle);
     }, []);
 
-    // Close mobile menu on route change
+    // Close menus on route change
     useEffect(() => {
         setMenuOpen(false);
         setDropdownOpen(false);
@@ -57,6 +58,26 @@ export default function Navbar() {
     const isActive = (href) =>
         href === "/" ? pathname === "/" : pathname.startsWith(href);
 
+    // ── Dropdown menu items by role ──────────────────────────────────
+    const adminMenuItems = [
+        { href: "/items/add", icon: FiPlusCircle, label: "Add Item" },
+        { href: "/items/manage", icon: FiLayout, label: "Manage Items" },
+    ];
+
+    const userMenuItems = [
+        { href: "/cart", icon: FiShoppingCart, label: "My Cart", badge: cartCount },
+        { href: "/orders", icon: FiPackage, label: "My Orders" },
+    ];
+
+    const menuItems = role === "admin" ? adminMenuItems : userMenuItems;
+
+    // ── Avatar initial ───────────────────────────────────────────────
+    const avatarLetter = user
+        ? (user.displayName ? user.displayName[0] : user.email[0]).toUpperCase()
+        : "?";
+
+    const displayName = user?.displayName || user?.email || "";
+
     return (
         <header
             style={{ backgroundColor: "#0f172a", borderBottom: "1px solid #1e293b" }}
@@ -65,7 +86,7 @@ export default function Navbar() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
 
-                    {/* Logo */}
+                    {/* ── Logo ── */}
                     <Link href="/" className="flex items-center gap-2 flex-shrink-0">
                         <div
                             style={{ backgroundColor: "#6366f1" }}
@@ -78,7 +99,7 @@ export default function Navbar() {
                         </span>
                     </Link>
 
-                    {/* Desktop nav links */}
+                    {/* ── Desktop nav links ── */}
                     <nav className="hidden md:flex items-center gap-1">
                         {navLinks.map((link) => (
                             <Link
@@ -97,7 +118,7 @@ export default function Navbar() {
                         ))}
                     </nav>
 
-                    {/* Desktop right side */}
+                    {/* ── Desktop right side ── */}
                     <div className="hidden md:flex items-center gap-3">
                         {!user ? (
                             <>
@@ -118,76 +139,142 @@ export default function Navbar() {
                             </>
                         ) : (
                             <div className="relative" ref={dropdownRef}>
+
+                                {/* Cart icon shortcut for users */}
+                                {role === "user" && (
+                                    <Link
+                                        href="/cart"
+                                        className="relative mr-2 p-2 rounded-lg transition-colors hover:bg-white/5"
+                                        style={{ color: "#94a3b8" }}
+                                    >
+                                        <FiShoppingCart size={20} />
+                                        {cartCount > 0 && (
+                                            <span
+                                                className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center text-white"
+                                                style={{ backgroundColor: "#6366f1" }}
+                                            >
+                                                {cartCount > 9 ? "9+" : cartCount}
+                                            </span>
+                                        )}
+                                    </Link>
+                                )}
+
+                                {/* Avatar button */}
                                 <button
-                                    onClick={() => setDropdownOpen((prev) => !prev)}
+                                    onClick={() => setDropdownOpen((p) => !p)}
                                     style={{
                                         backgroundColor: "#1e293b",
                                         border: "1px solid #334155",
                                     }}
                                     className="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors hover:border-indigo-500"
                                 >
+                                    {/* Avatar */}
                                     <div
-                                        style={{ backgroundColor: "#6366f1" }}
+                                        style={{
+                                            backgroundColor:
+                                                role === "admin" ? "#6366f1" : "#22c55e",
+                                        }}
                                         className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold"
                                     >
-                                        {user.displayName
-                                            ? user.displayName[0].toUpperCase()
-                                            : user.email[0].toUpperCase()}
+                                        {avatarLetter}
                                     </div>
-                                    <span style={{ color: "#f1f5f9" }} className="text-sm font-medium max-w-28 truncate">
-                                        {user.displayName || user.email}
+                                    <span
+                                        style={{ color: "#f1f5f9" }}
+                                        className="text-sm font-medium max-w-28 truncate"
+                                    >
+                                        {displayName}
                                     </span>
                                     <ChevronDown
                                         size={14}
                                         style={{ color: "#94a3b8" }}
-                                        className={`transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`}
+                                        className={`transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""
+                                            }`}
                                     />
                                 </button>
 
-                                {/* Dropdown */}
+                                {/* ── Dropdown ── */}
                                 {dropdownOpen && (
                                     <div
                                         style={{
                                             backgroundColor: "#1e293b",
                                             border: "1px solid #334155",
                                         }}
-                                        className="absolute right-0 mt-2 w-52 rounded-xl shadow-xl overflow-hidden"
+                                        className="absolute right-0 mt-2 w-56 rounded-xl shadow-xl overflow-hidden"
                                     >
                                         {/* User info */}
                                         <div
                                             style={{ borderBottom: "1px solid #334155" }}
                                             className="px-4 py-3"
                                         >
-                                            <p style={{ color: "#f1f5f9" }} className="text-sm font-medium truncate">
-                                                {user.displayName || "User"}
-                                            </p>
-                                            <p style={{ color: "#94a3b8" }} className="text-xs truncate">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <p
+                                                    style={{ color: "#f1f5f9" }}
+                                                    className="text-sm font-medium truncate"
+                                                >
+                                                    {user.displayName || "User"}
+                                                </p>
+                                                {/* Role badge */}
+                                                <span
+                                                    className="text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1 flex-shrink-0"
+                                                    style={
+                                                        role === "admin"
+                                                            ? {
+                                                                backgroundColor: "rgba(99,102,241,0.15)",
+                                                                color: "#6366f1",
+                                                                border: "1px solid rgba(99,102,241,0.3)",
+                                                            }
+                                                            : {
+                                                                backgroundColor: "rgba(34,197,94,0.12)",
+                                                                color: "#22c55e",
+                                                                border: "1px solid rgba(34,197,94,0.25)",
+                                                            }
+                                                    }
+                                                >
+                                                    {role === "admin" ? (
+                                                        <><ShieldCheck size={10} /> Admin</>
+                                                    ) : (
+                                                        <><FiUser size={10} /> User</>
+                                                    )}
+                                                </span>
+                                            </div>
+                                            <p
+                                                style={{ color: "#94a3b8" }}
+                                                className="text-xs truncate"
+                                            >
                                                 {user.email}
                                             </p>
                                         </div>
 
-                                        {/* Actions */}
+                                        {/* Role-based menu items */}
                                         <div className="py-1">
-                                            <Link
-                                                href="/items/add"
-                                                className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-white/5"
-                                                style={{ color: "#94a3b8" }}
-                                            >
-                                                <PlusCircle size={15} />
-                                                Add Item
-                                            </Link>
-                                            <Link
-                                                href="/items/manage"
-                                                className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-white/5"
-                                                style={{ color: "#94a3b8" }}
-                                            >
-                                                <LayoutDashboard size={15} />
-                                                Manage Items
-                                            </Link>
+                                            {menuItems.map(({ href, icon: Icon, label, badge }) => (
+                                                <Link
+                                                    key={href}
+                                                    href={href}
+                                                    className="flex items-center justify-between px-4 py-2.5 text-sm transition-colors hover:bg-white/5"
+                                                    style={{ color: "#94a3b8" }}
+                                                >
+                                                    <span className="flex items-center gap-3">
+                                                        <Icon size={15} />
+                                                        {label}
+                                                    </span>
+                                                    {badge > 0 && (
+                                                        <span
+                                                            className="text-xs font-bold px-2 py-0.5 rounded-full text-white"
+                                                            style={{ backgroundColor: "#6366f1" }}
+                                                        >
+                                                            {badge}
+                                                        </span>
+                                                    )}
+                                                </Link>
+                                            ))}
                                         </div>
 
                                         {/* Logout */}
-                                        <div style={{ borderTop: "1px solid #334155" }} className="py-1">
+                                        <div
+                                            style={{ borderTop: "1px solid #334155" }}
+                                            className="py-1"
+                                        >
                                             <button
                                                 onClick={handleLogout}
                                                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-white/5"
@@ -203,9 +290,9 @@ export default function Navbar() {
                         )}
                     </div>
 
-                    {/* Mobile hamburger */}
+                    {/* ── Mobile hamburger ── */}
                     <button
-                        onClick={() => setMenuOpen((prev) => !prev)}
+                        onClick={() => setMenuOpen((p) => !p)}
                         style={{ color: "#94a3b8" }}
                         className="md:hidden p-2 rounded-lg hover:text-white transition-colors"
                     >
@@ -214,7 +301,7 @@ export default function Navbar() {
                 </div>
             </div>
 
-            {/* Mobile menu */}
+            {/* ── Mobile menu ── */}
             {menuOpen && (
                 <div
                     style={{
@@ -223,6 +310,7 @@ export default function Navbar() {
                     }}
                     className="md:hidden px-4 py-4 space-y-1"
                 >
+                    {/* Nav links */}
                     {navLinks.map((link) => (
                         <Link
                             key={link.href}
@@ -239,8 +327,11 @@ export default function Navbar() {
                         </Link>
                     ))}
 
-                    {/* Mobile auth */}
-                    <div style={{ borderTop: "1px solid #1e293b" }} className="pt-3 mt-3">
+                    {/* Auth section */}
+                    <div
+                        style={{ borderTop: "1px solid #1e293b" }}
+                        className="pt-3 mt-3"
+                    >
                         {!user ? (
                             <div className="flex flex-col gap-2">
                                 <Link
@@ -260,34 +351,74 @@ export default function Navbar() {
                             </div>
                         ) : (
                             <div className="space-y-1">
-                                <div className="px-4 py-2">
-                                    <p style={{ color: "#f1f5f9" }} className="text-sm font-medium">
-                                        {user.displayName || "User"}
-                                    </p>
-                                    <p style={{ color: "#94a3b8" }} className="text-xs">
-                                        {user.email}
-                                    </p>
+                                {/* User info */}
+                                <div className="px-4 py-2 flex items-center gap-2">
+                                    <div
+                                        className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                                        style={{
+                                            backgroundColor:
+                                                role === "admin" ? "#6366f1" : "#22c55e",
+                                        }}
+                                    >
+                                        {avatarLetter}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p
+                                            style={{ color: "#f1f5f9" }}
+                                            className="text-sm font-medium truncate"
+                                        >
+                                            {user.displayName || "User"}
+                                        </p>
+                                        <p
+                                            style={{ color: "#94a3b8" }}
+                                            className="text-xs truncate"
+                                        >
+                                            {user.email}
+                                        </p>
+                                    </div>
+                                    <span
+                                        className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0"
+                                        style={
+                                            role === "admin"
+                                                ? { backgroundColor: "rgba(99,102,241,0.15)", color: "#6366f1" }
+                                                : { backgroundColor: "rgba(34,197,94,0.12)", color: "#22c55e" }
+                                        }
+                                    >
+                                        {role === "admin" ? "Admin" : "User"}
+                                    </span>
                                 </div>
-                                <Link
-                                    href="/items/add"
-                                    style={{ color: "#94a3b8" }}
-                                    className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm hover:text-white hover:bg-white/5 transition-colors"
-                                >
-                                    <PlusCircle size={15} /> Add Item
-                                </Link>
-                                <Link
-                                    href="/items/manage"
-                                    style={{ color: "#94a3b8" }}
-                                    className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm hover:text-white hover:bg-white/5 transition-colors"
-                                >
-                                    <LayoutDashboard size={15} /> Manage Items
-                                </Link>
+
+                                {/* Role-based links */}
+                                {menuItems.map(({ href, icon: Icon, label, badge }) => (
+                                    <Link
+                                        key={href}
+                                        href={href}
+                                        style={{ color: "#94a3b8" }}
+                                        className="flex items-center justify-between px-4 py-2.5 rounded-lg text-sm hover:text-white hover:bg-white/5 transition-colors"
+                                    >
+                                        <span className="flex items-center gap-3">
+                                            <Icon size={15} />
+                                            {label}
+                                        </span>
+                                        {badge > 0 && (
+                                            <span
+                                                className="text-xs font-bold px-2 py-0.5 rounded-full text-white"
+                                                style={{ backgroundColor: "#6366f1" }}
+                                            >
+                                                {badge}
+                                            </span>
+                                        )}
+                                    </Link>
+                                ))}
+
+                                {/* Logout */}
                                 <button
                                     onClick={handleLogout}
                                     style={{ color: "#ef4444" }}
                                     className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm hover:bg-white/5 transition-colors"
                                 >
-                                    <LogOut size={15} /> Logout
+                                    <LogOut size={15} />
+                                    Logout
                                 </button>
                             </div>
                         )}
