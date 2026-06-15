@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { getGadgetById, getRelatedGadgets, gadgets as seedGadgets } from "@/lib/data";
 import GadgetCard from "@/components/GadgetCard";
 import { useAuth } from "@/context/AuthContext";
@@ -21,6 +21,7 @@ import {
 
 export default function ItemDetailPage() {
     const { id } = useParams();
+    const router = useRouter();
     const { user, role } = useAuth();
     const { addToCart, cartItems } = useCart();
 

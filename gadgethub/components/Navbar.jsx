@@ -138,19 +138,19 @@ export default function Navbar() {
                                 </Link>
                             </>
                         ) : (
-                            <div className="relative" ref={dropdownRef}>
+                            <div className="relative flex items-center gap-2" ref={dropdownRef}>
 
                                 {/* Cart icon shortcut for users */}
                                 {role === "user" && (
                                     <Link
                                         href="/cart"
-                                        className="relative mr-2 p-2 rounded-lg transition-colors hover:bg-white/5"
+                                        className="relative p-2 rounded-lg transition-colors hover:bg-white/5 flex items-center justify-center"
                                         style={{ color: "#94a3b8" }}
                                     >
                                         <FiShoppingCart size={20} />
                                         {cartCount > 0 && (
                                             <span
-                                                className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center text-white"
+                                                className="absolute -top-0.5 -right-0.5 min-w-5 h-5 px-1 rounded-full text-xs font-bold flex items-center justify-center text-white"
                                                 style={{ backgroundColor: "#6366f1" }}
                                             >
                                                 {cartCount > 9 ? "9+" : cartCount}
