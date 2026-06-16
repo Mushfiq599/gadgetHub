@@ -6,7 +6,7 @@ A modern full-stack tech gadget showcase platform built with Next.js 15 App Rout
 
 ## 🚀 Live Demo
 
-[https://gadgethub.vercel.app](https://gadgethub.vercel.app)
+[https://gadget-hub-delta.vercel.app](https://gadget-hub-delta.vercel.app)
 
 ## 📁 GitHub Repository
 
@@ -130,3 +130,15 @@ A modern full-stack tech gadget showcase platform built with Next.js 15 App Rout
 
 ---
 
+## 🔐 Role System
+
+Roles are derived from the logged-in user's email at runtime:
+
+```js
+const ADMIN_EMAILS = ["demo.admin@gadgethub.com"];
+const role = ADMIN_EMAILS.includes(user.email) ? "admin" : "user";
+```
+
+To make yourself an admin, add your email to the `ADMIN_EMAILS` array in `context/AuthContext.jsx`.
+
+---
