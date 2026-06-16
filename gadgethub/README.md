@@ -10,7 +10,7 @@ A modern full-stack tech gadget showcase platform built with Next.js 15 App Rout
 
 ## 📁 GitHub Repository
 
-[https://github.com/yourusername/gadgethub](https://github.com/yourusername/gadgethub)
+[https://github.com/Mushfiq599/gadgetHub](https://github.com/Mushfiq599/gadgetHub)
 
 ---
 
