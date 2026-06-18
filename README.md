@@ -206,8 +206,8 @@ Frontend will run at: `http://localhost:3000`
 
 | Role | Email | Password |
 |---|---|---|
-| Admin | admin@gadgethub.com | Admin@12345 |
-| User | user@gadgethub.com | User@12345 |
+| Admin | demo.admin@gadgethub.com | admin123 |
+| User | demo.user@gadgethub.com | user1234 |
 
 *(Update these with your actual demo credentials)*
 
@@ -217,9 +217,9 @@ Frontend will run at: `http://localhost:3000`
 
 | Resource | Link |
 |---|---|
-| 🌐 Live Site | [your-gadgethub.vercel.app](https://gadget-hub-delta.vercel.app) |
-| 💻 Frontend Repo | [github.com/YOUR_USERNAME/gadgethub-client](https://github.com/Mushfiq599/gadgethub-client) |
-| ⚙️ Backend Repo | [github.com/YOUR_USERNAME/gadgethub-server](https://github.com/Mushfiq599/gadgethub-server) |
+| 🌐 Live Site | [gadget-hub-delta.vercel.app](https://gadget-hub-delta.vercel.app) |
+| 💻 Frontend Repo | [github.com/Mushfiq599/gadgethub-client](https://github.com/Mushfiq599/gadgethub-client) |
+| ⚙️ Backend Repo | [github.com/Mushfiq599/gadgethub-server](https://github.com/Mushfiq599/gadgethub-server) |
 | 🔥 Firebase Console | [firebase.google.com](https://firebase.google.com) |
 | 🍃 MongoDB Atlas | [mongodb.com/atlas](https://mongodb.com/atlas) |
 
